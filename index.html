@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PUBG 2.0 Countdown</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+  @font-face { font-family:'PUBG SANS'; src: url('PUBG SANS.ttf') format('truetype'); }
+  html, body { height:100%; width:100%; overflow:hidden; font-family:'PUBG SANS',sans-serif; background:#1b19099c; perspective:1000px; touch-action:none; }
+  
+  .media-protect { position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; pointer-events:auto; }
+  #bgVideo { position:fixed; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:-2; filter:brightness(0.7); transform:translate3d(0,0,0); transition:transform 0.1s linear; pointer-events:none; user-select:none; }
+  #fadeOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(100,100,0,0.4); z-index:-1; pointer-events:none; }
+  .flash { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,0,0.2); opacity:0; pointer-events:none; z-index:2; transition:opacity 0.2s ease; }
+  
+  .countdown-container { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; transform-style:preserve-3d; }
+  
+  h1 {
+    font-family:'PUBG SANS'; 
+    font-size:15vw; 
+    font-weight:900; 
+    color: transparent; 
+    -webkit-text-stroke: 2px gold; 
+    text-stroke: 2px gold;
+    display:inline-block; 
+    transform-origin:center center; 
+    letter-spacing:0.5vw; 
+    pointer-events:none; 
+    user-select:none; 
+    animation: strokeGlow 2s infinite alternate;
+  }
+  @keyframes strokeGlow {
+    0% { -webkit-text-stroke-color: gold; text-shadow: 0 0 2px gold; }
+    50% { -webkit-text-stroke-color: #ffd700; text-shadow: 0 0 10px gold; }
+    100% { -webkit-text-stroke-color: gold; text-shadow: 0 0 2px gold; }
+  }
+  
+  .bounce { animation:bounce 0.6s ease-out forwards; }
+  @keyframes bounce { 0%{transform:scale(1);}25%{transform:scale(1.25);}50%{transform:scale(1.3);}75%{transform:scale(1.25);}100%{transform:scale(1);} }
+
+  .time { display:flex; justify-content:center; gap:5vw; font-size:4vw; margin-top:2vh; font-family:'PUBG SANS'; }
+  .time div { text-align:center; pointer-events:none; }
+
+  .time div span {
+    display: block;
+    color: rgba(255,255,255,0.9);
+    -webkit-text-stroke: 2px gold;
+    text-stroke: 2px gold;
+    text-shadow: 0 0 5px rgba(255,255,255,0.3);
+    transition: transform 0.5s ease, color 0.5s ease, text-shadow 0.5s ease;
+    pointer-events: none;
+    user-select: none;
+    animation: strokeGlowTime 2s infinite alternate;
+  }
+
+  @keyframes strokeGlowTime {
+    0% { -webkit-text-stroke-color: gold; text-shadow: 0 0 2px gold; color: rgba(255,255,255,0.9); }
+    50% { -webkit-text-stroke-color: #ffd700; text-shadow: 0 0 10px gold; color: rgba(255,238,0,0.9); }
+    100% { -webkit-text-stroke-color: gold; text-shadow: 0 0 2px gold; color: rgba(255,255,255,0.9); }
+  }
+
+  .time div span.animate { animation:pulse 0.6s ease forwards; }
+  @keyframes pulse { 0%{transform:scale(1) translateY(0);} 50%{transform:scale(1.3) translateY(-5px); color:rgba(255,238,0,0.9); text-shadow:0 0 10px rgb(255,251,0);} 100%{transform:scale(1) translateY(0);} }
+
+  .label {
+    font-family:'PUBG SANS';
+    font-size:1em;
+    opacity:0.9;
+    letter-spacing:0.1em;
+    color:rgba(255,255,255,0.8);
+    -webkit-text-stroke: 1.5px gold;
+    text-stroke: 1.5px gold;
+    text-shadow: 0 0 3px gold;
+    animation: strokeGlowTime 2s infinite alternate;
+  }
+
+  footer { position:fixed; bottom:5px; width:100%; text-align:center; font-family:'PUBG SANS'; font-size:1em; color:rgba(255,255,255,0.7); z-index:10; pointer-events:none; }
+  img, video, audio { pointer-events:none; user-select:none; }
+</style>
+</head>
+<body>
+
+<div class="media-protect"></div>
+
+<video id="bgVideo" playsinline autoplay loop muted></video>
+<div id="fadeOverlay"></div>
+<div class="flash" id="flash"></div>
+
+<div class="countdown-container" id="container">
+  <h1 id="title">PUBG 2.0</h1>
+  <div class="time">
+    <div id="days-container"><span id="days">0</span><div class="label">DAYS</div></div>
+    <div id="hours-container"><span id="hours">0</span><div class="label">HOURS</div></div>
+    <div id="minutes-container"><span id="minutes">0</span><div class="label">MINUTES</div></div>
+    <div id="seconds-container"><span id="seconds">0</span><div class="label">SECONDS</div></div>
+  </div>
+</div>
+
+<audio id="heartbeat"></audio>
+<audio id="timeSound"></audio>
+
+<footer>All Rights Reserved By SiRJ0</footer>
+
+<script>
+// ===== Media sources =====
+const video = document.getElementById("bgVideo");
+video.src = "Intro.mp4";
+video.volume = 0.074;
+
+const heartbeat = document.getElementById("heartbeat");
+heartbeat.src = "PUBGbeat.mp3";
+heartbeat.volume = 1;
+
+const timeSound = document.getElementById("timeSound");
+timeSound.src = "K98.mp3";
+timeSound.volume = 0.05;
+
+// ===== Autoplay with audio even after reload =====
+function playMedia() {
+    video.muted = false;
+    video.play().catch(()=>{});
+    heartbeat.play().catch(()=>{});
+}
+
+// Try autoplay on load
+document.addEventListener("DOMContentLoaded", ()=>{
+    setTimeout(playMedia, 200); // delay helps bypass browser restriction
+});
+
+// Also ensure user interaction triggers it for stubborn mobile browsers
+document.body.addEventListener("click", playMedia, {once:true});
+document.body.addEventListener("touchstart", playMedia, {once:true});
+
+// ===== Countdown logic =====
+const targetDate = new Date("March 18, 2026 13:00:00").getTime();
+const dayNumber = document.getElementById("days");
+const hourNumber = document.getElementById("hours");
+const minuteNumber = document.getElementById("minutes");
+const secondNumber = document.getElementById("seconds");
+let prevValues = {days:-1,hours:-1,minutes:-1,seconds:-1};
+
+function updateCountdown(){
+    const now=Date.now();
+    const diff=targetDate-now;
+    if(diff<0){document.getElementById("container").innerHTML="<h1>PUBG 2.0 Launched!</h1>"; return;}
+    const days=Math.floor(diff/(1000*60*60*24));
+    const hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+    const minutes=Math.floor((diff%(1000*60*60))/(1000*60));
+    const seconds=Math.floor((diff%(1000*60))/1000);
+
+    dayNumber.textContent=days;
+    hourNumber.textContent=hours.toString().padStart(2,'0');
+    minuteNumber.textContent=minutes.toString().padStart(2,'0');
+    secondNumber.textContent=seconds.toString().padStart(2,'0');
+
+    if(prevValues.seconds !== seconds){
+        secondNumber.classList.add("animate");
+        timeSound.currentTime=0; timeSound.play();
+        setTimeout(()=>secondNumber.classList.remove("animate"),600);
+    }
+    if(prevValues.minutes !== minutes){
+        minuteNumber.classList.add("animate");
+        timeSound.currentTime=0; timeSound.play();
+        setTimeout(()=>minuteNumber.classList.remove("animate"),600);
+    }
+    if(prevValues.hours !== hours){
+        hourNumber.classList.add("animate");
+        timeSound.currentTime=0; timeSound.play();
+        setTimeout(()=>hourNumber.classList.remove("animate"),600);
+    }
+    if(prevValues.days !== days){
+        dayNumber.classList.add("animate");
+        timeSound.currentTime=0; timeSound.play();
+        setTimeout(()=>dayNumber.classList.remove("animate"),600);
+    }
+
+    prevValues={days,hours,minutes,seconds};
+}
+setInterval(updateCountdown,1000); updateCountdown();
+
+// ===== Heartbeat animation =====
+function playHeartbeat(){
+  heartbeat.currentTime=0; heartbeat.play();
+  setTimeout(()=>heartbeat.pause(),1000);
+  const title=document.getElementById("title");
+  const flash=document.getElementById("flash");
+  title.classList.add("bounce");
+  setTimeout(()=>title.classList.remove("bounce"),600);
+  flash.style.opacity=1; setTimeout(()=>flash.style.opacity=0,300);
+}
+playHeartbeat(); setInterval(playHeartbeat,5000);
+
+// ===== Mouse + gyro movement =====
+function applyMovement(x,y){
+    video.style.transform=`translate3d(${-x}px,${-y}px,0)`;
+    document.getElementById("container").style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;
+}
+document.addEventListener("mousemove",e=>{applyMovement((e.clientX-window.innerWidth/2)/50,(e.clientY-window.innerHeight/2)/50);});
+window.addEventListener("deviceorientation",e=>{applyMovement((e.gamma||0)*2,(e.beta||0)*2);},true);
+
+// ===== Security protections =====
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('dragstart',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+    if(e.key==="F12") e.preventDefault();
+    if(e.ctrlKey && e.shiftKey && ["I","J","C"].includes(e.key.toUpperCase())) e.preventDefault();
+    if(e.ctrlKey && e.key.toUpperCase()==="U") e.preventDefault();
+    if(e.ctrlKey && e.key.toUpperCase()==="S") e.preventDefault();
+});
+document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+</script>
+</body>
+</html>
